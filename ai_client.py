@@ -86,3 +86,15 @@ class AIClient:
         except Exception as e:
             print(f"AI Chat Error: {e}")
             raise
+
+
+# Singleton instance
+client = AIClient()
+
+def generate(prompt, model=None, **kwargs):
+    """Module-level helper function for text generation."""
+    return client.generate(prompt, model, **kwargs)
+
+def chat(messages, model=None, **kwargs):
+    """Module-level helper function for chat."""
+    return client.chat(messages, model, **kwargs)
