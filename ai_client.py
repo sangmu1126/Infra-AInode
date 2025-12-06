@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -7,8 +8,8 @@ class AIClient:
     def __init__(self):
         self.endpoint = os.environ.get("AI_ENDPOINT", "http://10.0.20.100:11434")
         self.default_model = os.environ.get("LLM_MODEL", "llama3:8b")
-        self.output_dir = "/output"  # Standard path in container
-        
+        self.output_dir = "/output"
+
         # Retry Strategy
         retry_strategy = Retry(
             total=3,
@@ -19,3 +20,29 @@ class AIClient:
         self.session = requests.Session()
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
+
+    def _record_usage(self, response_data):
+        """Record token usage to a file for the Executor to pick up."""
+        try:
+            usage = {
+                "prompt_eval_count": response_data.get("prompt_eval_count", 0),
+                "eval_count": response_data.get("eval_count", 0)
+            }
+            usage_file = os.path.join(self.output_dir, ".llm_usage_stats.json")
+            
+            current_total = {"prompt_eval_count": 0, "eval_count": 0}
+            if os.path.exists(usage_file):
+                with open(usage_file, 'r') as f:
+                    try:
+                        current_total = json.load(f)
+                    except:
+                        pass
+            
+            current_total["prompt_eval_count"] += usage["prompt_eval_count"]
+            current_total["eval_count"] += usage["eval_count"]
+            
+            with open(usage_file, 'w') as f:
+                json.dump(current_total, f)
+                
+        except Exception as e:
+            pass
